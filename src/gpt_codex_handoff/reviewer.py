@@ -67,6 +67,12 @@ class OpenAIResponsesClient:
         payload: dict[str, Any],
         schema: dict[str, Any],
     ) -> Recommendation:
+        if not self.api_key:
+            raise RuntimeError(
+                "OPENAI_API_KEY is required for live reviewer calls. "
+                "Use a fake ReviewerClient for local dry runs."
+            )
+
         from openai import OpenAI
 
         client = OpenAI(api_key=self.api_key)
@@ -177,4 +183,3 @@ def _expect_enum(value: Recommendation, key: str, allowed: set[str]) -> None:
 def _expect_str_list(value: Recommendation, key: str) -> None:
     if not isinstance(value[key], list) or not all(isinstance(item, str) for item in value[key]):
         raise ValueError(f"Recommendation field {key} must be a list of strings.")
-

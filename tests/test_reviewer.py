@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from gpt_codex_handoff.context import ReviewContext
-from gpt_codex_handoff.reviewer import OpenAIReviewer, validate_recommendation
+from gpt_codex_handoff.reviewer import OpenAIResponsesClient, OpenAIReviewer, validate_recommendation
 
 
 VALID_RECOMMENDATION = {
@@ -85,6 +85,17 @@ class ReviewerTests(unittest.TestCase):
         self.assertIs(result["should_continue"], False)
         self.assertEqual(result["risk_level"], "medium")
         self.assertEqual(client.calls, [])
+
+    def test_live_client_requires_api_key_before_importing_openai(self):
+        client = OpenAIResponsesClient(api_key=None)
+
+        with self.assertRaisesRegex(RuntimeError, "OPENAI_API_KEY is required"):
+            client.create_recommendation(
+                model="test-model",
+                system_prompt="Return JSON.",
+                payload={"summary": "No API key."},
+                schema={},
+            )
 
 
 if __name__ == "__main__":
