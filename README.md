@@ -48,33 +48,15 @@ Do not paste secrets into tool inputs, logs, diffs, or test fixtures.
 
 ## Codex MCP Registration
 
-After installing the package in the same environment Codex will use, register this server as a local MCP command in your Codex configuration:
+After installing the package in the same environment Codex will use, write the repo-local Codex MCP configuration with:
 
-```toml
-[mcp_servers.gpt_codex_handoff]
-command = "gpt-codex-handoff"
+```powershell
+python scripts\setup_codex_mcp.py --mode fake
 ```
 
-For a repository-local virtual environment on Windows, point Codex at that Python executable:
+The script creates `.codex\config.toml` and points Codex at this checkout's `.venv\Scripts\python.exe`.
 
-```toml
-[mcp_servers.gpt_codex_handoff]
-command = "C:\\path\\to\\gpt-codex-handoff\\.venv\\Scripts\\python.exe"
-args = ["-m", "gpt_codex_handoff.mcp_server"]
-env = { OPENAI_API_KEY = "sk-...", OPENAI_REVIEWER_MODEL = "gpt-4.1-mini" }
-```
-
-For this checkout, replace the command path with:
-
-```toml
-command = "C:\\Users\\jiash\\OneDrive\\Documents\\GPT CodeX integration\\.venv\\Scripts\\python.exe"
-```
-
-Restart Codex after changing MCP configuration so it can discover `ask_gpt_next_step`.
-
-### Fake Mode Registration
-
-For the first Codex wiring test, register the MCP server in fake mode and do not set `OPENAI_API_KEY`:
+For fake mode, the generated config looks like:
 
 ```toml
 [mcp_servers.gpt_codex_handoff]
@@ -83,7 +65,9 @@ args = ["-m", "gpt_codex_handoff.mcp_server"]
 env = { GPT_HANDOFF_REVIEWER_MODE = "fake" }
 ```
 
-Restart Codex, then type `/mcp` in Codex chat. You should see `gpt_codex_handoff` as enabled. Some Codex UI versions show only the server row rather than an expandable tool list.
+Restart Codex after changing MCP configuration so it can discover `ask_gpt_next_step`.
+
+Then type `/mcp` in Codex chat. You should see `gpt_codex_handoff` as enabled. Some Codex UI versions show only the server row rather than an expandable tool list.
 
 After `/mcp` shows the server, you can safely ask Codex to call the tool:
 
@@ -94,6 +78,22 @@ Call ask_gpt_next_step with summary="Fake-mode wiring test", changed_files=[], t
 The response should include a `handoff_note` saying fake reviewer mode is enabled and no OpenAI API call was made.
 
 Fake mode is only for wiring tests. It does not evaluate the session with a real model.
+
+### Real Mode Registration
+
+When you are ready for real reviewer calls, set `OPENAI_API_KEY` in the environment that launches Codex, then run:
+
+```powershell
+python scripts\setup_codex_mcp.py --mode real
+```
+
+The script warns if `OPENAI_API_KEY` is not set. Real mode will fail clearly until the key is available.
+
+The real-mode config sets:
+
+```toml
+env = { GPT_HANDOFF_REVIEWER_MODE = "real" }
+```
 
 ## Run Tests
 
