@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gpt-codex-handoff"
+version = "0.1.0"
+description = "MCP reviewer tool that asks a GPT-style reviewer what Codex should do next."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "GPT Codex Handoff" }
+]
+dependencies = [
+  "mcp>=1.9",
+  "openai>=1.82"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0"
+]
+
+[project.scripts]
+gpt-codex-handoff = "gpt_codex_handoff.mcp_server:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
