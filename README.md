@@ -44,6 +44,12 @@ $env:OPENAI_API_KEY = "sk-..."
 $env:OPENAI_REVIEWER_MODEL = "gpt-4.1-mini"
 ```
 
+For Codex desktop on Windows, the most reliable real-mode setup stores `OPENAI_API_KEY` in `.codex\.env`, which is ignored by Git:
+
+```text
+OPENAI_API_KEY=...
+```
+
 Do not paste secrets into tool inputs, logs, diffs, or test fixtures.
 
 ## Codex MCP Registration
@@ -81,20 +87,22 @@ Fake mode is only for wiring tests. It does not evaluate the session with a real
 
 ### Real Mode Registration
 
-When you are ready for real reviewer calls, set `OPENAI_API_KEY` in the environment that launches Codex, then run:
+When you are ready for real reviewer calls on Windows, run:
 
 ```powershell
-python scripts\setup_codex_mcp.py --mode real
+python scripts\setup_codex_mcp.py --mode real --write-local-env
 ```
 
-The script warns if `OPENAI_API_KEY` is not set. It never writes the key value into config. In real mode, Codex forwards the existing Windows environment variable by name.
+The script reads `OPENAI_API_KEY` from the current shell if it is set. If it is missing, it prompts securely without echoing. It writes the key to ignored `.codex\.env`, never prints the key, and never writes the key value into config. In real mode, Codex still forwards the existing Windows environment variable by name when available.
 
 The real-mode config sets:
 
 ```toml
-env = { GPT_HANDOFF_REVIEWER_MODE = "real" }
+env = { GPT_HANDOFF_REVIEWER_MODE = "real", GPT_HANDOFF_DOTENV_PATH = "C:\\absolute\\path\\to\\.codex\\.env" }
 env_vars = ["OPENAI_API_KEY"]
 ```
+
+Restart Codex after running the command so the MCP process starts with the updated configuration.
 
 ## Run Tests
 

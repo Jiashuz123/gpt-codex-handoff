@@ -178,7 +178,35 @@ def _client_from_environment(api_key: str | None) -> ReviewerClient:
     mode = os.getenv("GPT_HANDOFF_REVIEWER_MODE", "").strip().lower()
     if mode == "fake":
         return FakeReviewerClient()
-    return OpenAIResponsesClient(api_key or os.getenv("OPENAI_API_KEY"))
+    return OpenAIResponsesClient(api_key or _openai_api_key_from_environment())
+
+
+def _openai_api_key_from_environment() -> str | None:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if api_key:
+        return api_key
+
+    dotenv_path = os.getenv("GPT_HANDOFF_DOTENV_PATH")
+    if not dotenv_path:
+        return None
+
+    return _read_dotenv_value(Path(dotenv_path), "OPENAI_API_KEY")
+
+
+def _read_dotenv_value(path: Path, key: str) -> str | None:
+    if not path.is_file():
+        return None
+
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+
+        name, value = stripped.split("=", 1)
+        if name.strip() == key:
+            return value.strip() or None
+
+    return None
 
 
 def validate_recommendation(value: Recommendation) -> None:

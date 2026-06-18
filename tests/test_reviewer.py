@@ -103,6 +103,53 @@ class ReviewerTests(unittest.TestCase):
                 schema={},
             )
 
+    def test_real_reviewer_mode_loads_api_key_from_process_environment(self):
+        with patch.dict(
+            "os.environ",
+            {"OPENAI_API_KEY": "test-process-key", "GPT_HANDOFF_REVIEWER_MODE": "real"},
+            clear=True,
+        ):
+            reviewer = OpenAIReviewer()
+
+        self.assertIsInstance(reviewer.client, OpenAIResponsesClient)
+        self.assertEqual(reviewer.client.api_key, "test-process-key")
+
+    def test_real_reviewer_mode_prefers_process_environment_over_dotenv(self):
+        with patch.dict(
+            "os.environ",
+            {
+                "OPENAI_API_KEY": "test-process-key",
+                "GPT_HANDOFF_DOTENV_PATH": "does-not-need-to-exist",
+                "GPT_HANDOFF_REVIEWER_MODE": "real",
+            },
+            clear=True,
+        ):
+            reviewer = OpenAIReviewer()
+
+        self.assertIsInstance(reviewer.client, OpenAIResponsesClient)
+        self.assertEqual(reviewer.client.api_key, "test-process-key")
+
+    def test_real_reviewer_mode_loads_api_key_from_dotenv_path(self):
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as tmp_dir:
+            dotenv_path = f"{tmp_dir}/.env"
+            with open(dotenv_path, "w", encoding="utf-8") as dotenv_file:
+                dotenv_file.write("# local secret file\nOPENAI_API_KEY=test-dotenv-key\n")
+
+            with patch.dict(
+                "os.environ",
+                {
+                    "GPT_HANDOFF_DOTENV_PATH": dotenv_path,
+                    "GPT_HANDOFF_REVIEWER_MODE": "real",
+                },
+                clear=True,
+            ):
+                reviewer = OpenAIReviewer()
+
+        self.assertIsInstance(reviewer.client, OpenAIResponsesClient)
+        self.assertEqual(reviewer.client.api_key, "test-dotenv-key")
+
     def test_real_reviewer_mode_requires_api_key(self):
         with patch.dict("os.environ", {}, clear=True):
             reviewer = OpenAIReviewer()
