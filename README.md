@@ -104,6 +104,16 @@ env_vars = ["OPENAI_API_KEY"]
 
 Restart Codex after running the command so the MCP process starts with the updated configuration.
 
+### Diagnose Reviewer Setup
+
+To check local reviewer wiring without printing secrets, run:
+
+```powershell
+python scripts\diagnose_reviewer_setup.py
+```
+
+The diagnostic reports only safe status values, such as whether the package imports, whether real or fake mode is configured, whether `OPENAI_API_KEY` is present, whether `GPT_HANDOFF_DOTENV_PATH` is configured, whether the dotenv file exists, and whether the MCP server module is importable. It does not print the API key, dotenv path, or dotenv file contents.
+
 ## Run Tests
 
 ```powershell
