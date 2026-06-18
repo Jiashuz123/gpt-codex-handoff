@@ -53,6 +53,34 @@ _REPEATED_FAILURE_TERMS = [
     "stuck",
 ]
 
+_DOC_FILE_NAMES = {
+    "readme.md",
+    "changelog.md",
+    "contributing.md",
+    "license.md",
+    "security.md",
+}
+
+_DOC_EXTENSIONS = {
+    ".md",
+    ".markdown",
+    ".rst",
+    ".txt",
+    ".adoc",
+}
+
+_SECRET_EXPOSURE_INSTRUCTION = re.compile(
+    r"\b(print|display|expose|log|dump|reveal)\b.{0,40}\b(secrets?|tokens?|api keys?|credentials?)\b",
+    re.IGNORECASE,
+)
+
+_NEGATED_SECRET_EXPOSURE = re.compile(
+    r"\b(do not|don't|never|avoid|without)\b.{0,60}"
+    r"\b(print|display|expose|log|dump|reveal)\b.{0,40}"
+    r"\b(secrets?|tokens?|api keys?|credentials?)\b",
+    re.IGNORECASE,
+)
+
 
 @dataclass(frozen=True)
 class ReviewContext:
@@ -110,14 +138,23 @@ class ReviewContext:
         if any(pattern.search(text) for pattern in _SECRET_PATTERNS):
             raise SafetyStop("Possible credentials or secrets were found in the context.")
 
+        if self.is_docs_only_change():
+            if _SECRET_EXPOSURE_INSTRUCTION.search(text) and not _NEGATED_SECRET_EXPOSURE.search(text):
+                raise SafetyStop(
+                    "Documentation appears to instruct users to expose secrets.",
+                    "high",
+                )
+        elif any(term in lower_text for term in _HIGH_RISK_TERMS):
+            raise SafetyStop("The context includes high-risk changes that need human review.")
+
         if any(term in lower_text for term in _AMBIGUOUS_PRODUCT_TERMS):
             raise SafetyStop("The next step depends on an ambiguous product decision.", "medium")
 
-        if any(term in lower_text for term in _HIGH_RISK_TERMS):
-            raise SafetyStop("The context includes high-risk changes that need human review.")
-
         if any(term in lower_text for term in _REPEATED_FAILURE_TERMS):
             raise SafetyStop("Repeated failures detected; stop for human direction.", "medium")
+
+    def is_docs_only_change(self) -> bool:
+        return bool(self.changed_files) and all(_is_documentation_file(path) for path in self.changed_files)
 
 
 def _coerce_list(value: list[str] | str | None) -> list[str]:
@@ -127,3 +164,15 @@ def _coerce_list(value: list[str] | str | None) -> list[str]:
         return [line.strip() for line in value.splitlines() if line.strip()]
     return [str(item) for item in value]
 
+
+def _is_documentation_file(path: str) -> bool:
+    normalized = path.replace("\\", "/").lower().strip()
+    filename = normalized.rsplit("/", 1)[-1]
+    suffix = "." + filename.rsplit(".", 1)[-1] if "." in filename else ""
+
+    return (
+        filename in _DOC_FILE_NAMES
+        or normalized.startswith("docs/")
+        or normalized.startswith("documentation/")
+        or suffix in _DOC_EXTENSIONS
+    )

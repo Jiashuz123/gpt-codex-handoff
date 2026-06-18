@@ -92,6 +92,59 @@ class ReviewerTests(unittest.TestCase):
         self.assertEqual(result["risk_level"], "medium")
         self.assertEqual(client.calls, [])
 
+    def test_docs_only_high_risk_mentions_reach_reviewer_as_low_risk_context(self):
+        client = FakeClient()
+        reviewer = OpenAIReviewer(client=client)
+
+        result = reviewer.review(
+            ReviewContext(
+                summary="Updated Windows testing troubleshooting docs.",
+                changed_files=["README.md", "docs/long_run_protocol.md"],
+                test_results="not run",
+                recent_log=(
+                    "Docs mention credentials, config, deployment, auth, billing, CI, "
+                    "and secrets only as topics to avoid during testing."
+                ),
+            )
+        )
+
+        self.assertEqual(result, VALID_RECOMMENDATION)
+        self.assertTrue(client.calls)
+        self.assertIn("docs-only testing", client.calls[0]["system_prompt"])
+        self.assertIn("do not mark risk high solely", client.calls[0]["system_prompt"])
+
+    def test_code_high_risk_mentions_still_stop_before_reviewer(self):
+        client = FakeClient()
+        reviewer = OpenAIReviewer(client=client)
+
+        result = reviewer.review(
+            ReviewContext(
+                summary="Changed auth and billing behavior.",
+                changed_files=["src/gpt_codex_handoff/context.py"],
+            )
+        )
+
+        self.assertIs(result["should_continue"], False)
+        self.assertEqual(result["risk_level"], "high")
+        self.assertIn("high-risk", result["reason"])
+        self.assertEqual(client.calls, [])
+
+    def test_docs_only_secret_exposure_instruction_stops_before_reviewer(self):
+        client = FakeClient()
+        reviewer = OpenAIReviewer(client=client)
+
+        result = reviewer.review(
+            ReviewContext(
+                summary="Updated docs to tell users to print credentials during debugging.",
+                changed_files=["docs/troubleshooting.md"],
+            )
+        )
+
+        self.assertIs(result["should_continue"], False)
+        self.assertEqual(result["risk_level"], "high")
+        self.assertIn("expose secrets", result["reason"])
+        self.assertEqual(client.calls, [])
+
     def test_live_client_requires_api_key_before_importing_openai(self):
         client = OpenAIResponsesClient(api_key=None)
 
