@@ -33,6 +33,14 @@ When stopping, summarize the current evidence, the exact blocker, files changed,
 
 ## Mission Prompt Templates
 
+Use `python -m pytest` for Windows test commands so the active Python environment chooses the pytest module directly. Prefer a repo-local temp directory such as:
+
+```powershell
+python -m pytest --basetemp=".venv\pytest-tmp"
+```
+
+If pytest reports `PermissionError: Access is denied` under `AppData\Local\Temp\pytest-of-...`, rerun with `--basetemp` pointing at a repo-local directory. If that repo-local temp directory is locked, close stale Python or Codex processes or choose a fresh path such as `.venv\pytest-tmp-trial`.
+
 ### 30-Minute Trial
 
 ```text
@@ -62,7 +70,8 @@ Stop immediately if:
 
 Verification:
 - Run focused tests for the touched area.
-- If practical, run the repo's standard test command.
+- If practical, run the repo's standard Windows-safe test command:
+  python -m pytest --basetemp=".venv\pytest-tmp"
 
 Final response:
 - Summarize files changed.
@@ -106,7 +115,8 @@ Stop immediately if:
 
 Verification:
 - Run focused tests after each completed chunk when available.
-- Run the repo's standard test command near the end if the changes warrant it.
+- Run the repo's standard Windows-safe test command near the end if the changes warrant it:
+  python -m pytest --basetemp=".venv\pytest-tmp"
 
 Final response:
 - Summarize files changed.
@@ -152,7 +162,8 @@ Stop immediately if:
 
 Verification:
 - Run focused tests after each completed chunk when available.
-- Run broader tests before the final summary if feasible.
+- Run broader tests before the final summary if feasible:
+  python -m pytest --basetemp=".venv\pytest-tmp"
 - If tests cannot run, record the exact reason and avoid claiming success.
 
 Final response:

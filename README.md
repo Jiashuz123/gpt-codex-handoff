@@ -22,7 +22,7 @@ python -m pip install -e ".[dev]"
 Run the tests:
 
 ```powershell
-pytest
+python -m pytest --basetemp=".venv\pytest-tmp"
 ```
 
 PowerShell can treat brackets as wildcard syntax in some contexts, so keep `".[dev]"` quoted.
@@ -107,7 +107,7 @@ Restart Codex after running the command so the MCP process starts with the updat
 ## Run Tests
 
 ```powershell
-pytest
+python -m pytest --basetemp=".venv\pytest-tmp"
 ```
 
 Or, without installing the optional test runner:
@@ -118,6 +118,18 @@ python -m unittest discover -s tests -v
 ```
 
 The tests validate schema handling and safety behavior without making real API calls.
+
+### Windows Test Troubleshooting
+
+Use `python -m pytest` instead of bare `pytest` on Windows. It avoids PATH issues where the `pytest` launcher is installed in `.venv\Scripts` but the shell cannot find it.
+
+If pytest reports `PermissionError: Access is denied` under a temp path such as `AppData\Local\Temp\pytest-of-...`, point pytest at a repo-local temp directory:
+
+```powershell
+python -m pytest --basetemp=".venv\pytest-tmp"
+```
+
+If `.venv\pytest-tmp` itself becomes locked, close stale Python or Codex processes and rerun the command, or use a fresh repo-local temp directory such as `.venv\pytest-tmp-trial`.
 
 ## Tool
 
