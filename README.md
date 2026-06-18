@@ -87,12 +87,13 @@ When you are ready for real reviewer calls, set `OPENAI_API_KEY` in the environm
 python scripts\setup_codex_mcp.py --mode real
 ```
 
-The script warns if `OPENAI_API_KEY` is not set. Real mode will fail clearly until the key is available.
+The script warns if `OPENAI_API_KEY` is not set. It never writes the key value into config. In real mode, Codex forwards the existing Windows environment variable by name.
 
 The real-mode config sets:
 
 ```toml
 env = { GPT_HANDOFF_REVIEWER_MODE = "real" }
+env_vars = ["OPENAI_API_KEY"]
 ```
 
 ## Run Tests

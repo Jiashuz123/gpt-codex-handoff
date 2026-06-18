@@ -29,15 +29,16 @@ def venv_python_path(repo_root: Path) -> Path:
 
 
 def build_config(python_path: Path, mode: str) -> str:
-    return "\n".join(
-        [
-            f"[mcp_servers.{SERVER_NAME}]",
-            f'command = "{_toml_string(python_path)}"',
-            f'args = ["-m", "{MODULE_NAME}"]',
-            f'env = {{ GPT_HANDOFF_REVIEWER_MODE = "{mode}" }}',
-            "",
-        ]
-    )
+    lines = [
+        f"[mcp_servers.{SERVER_NAME}]",
+        f'command = "{_toml_string(python_path)}"',
+        f'args = ["-m", "{MODULE_NAME}"]',
+        f'env = {{ GPT_HANDOFF_REVIEWER_MODE = "{mode}" }}',
+    ]
+    if mode == "real":
+        lines.append('env_vars = ["OPENAI_API_KEY"]')
+    lines.append("")
+    return "\n".join(lines)
 
 
 def write_config(mode: str, start: Path | None = None) -> Path:

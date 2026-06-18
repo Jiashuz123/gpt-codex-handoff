@@ -33,6 +33,8 @@ def test_write_config_fake_mode(tmp_path: Path):
     assert "[mcp_servers.gpt_codex_handoff]" in content
     assert 'args = ["-m", "gpt_codex_handoff.mcp_server"]' in content
     assert 'env = { GPT_HANDOFF_REVIEWER_MODE = "fake" }' in content
+    assert "env_vars" not in content
+    assert "OPENAI_API_KEY" not in content
     assert "\\\\.venv\\\\Scripts\\\\python.exe" in content
 
 
@@ -48,4 +50,12 @@ def test_build_config_real_mode():
     content = build_config(Path(r"C:\repo\.venv\Scripts\python.exe"), "real")
 
     assert 'env = { GPT_HANDOFF_REVIEWER_MODE = "real" }' in content
+    assert 'env_vars = ["OPENAI_API_KEY"]' in content
     assert 'command = "C:\\\\repo\\\\.venv\\\\Scripts\\\\python.exe"' in content
+
+
+def test_build_config_does_not_write_secret_value():
+    content = build_config(Path(r"C:\repo\.venv\Scripts\python.exe"), "real")
+
+    assert "SHOULD_NOT_APPEAR_SECRET_VALUE" not in content
+    assert "OPENAI_API_KEY =" not in content

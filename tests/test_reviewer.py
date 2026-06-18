@@ -69,7 +69,7 @@ class ReviewerTests(unittest.TestCase):
         result = reviewer.review(
             ReviewContext(
                 summary="Need to debug config.",
-                recent_log="OPENAI_API_KEY=sk-thisshouldnotbesent123456",
+                recent_log="OPENAI_API_KEY=redacted-value",
             )
         )
 
