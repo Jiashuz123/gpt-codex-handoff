@@ -29,7 +29,13 @@ PowerShell can treat brackets as wildcard syntax in some contexts, so keep `".[d
 
 ## Environment
 
-Live reviewer calls require `OPENAI_API_KEY`. The tests and fake example do not.
+Fake reviewer mode is for local wiring tests. It returns valid recommendation JSON without importing the OpenAI client, without requiring `OPENAI_API_KEY`, and without contacting OpenAI:
+
+```powershell
+$env:GPT_HANDOFF_REVIEWER_MODE = "fake"
+```
+
+Live reviewer calls require `OPENAI_API_KEY` and must not use fake mode.
 
 Copy `.env.example` to `.env` for your own notes, or set variables in the shell that launches Codex:
 
@@ -65,6 +71,29 @@ command = "C:\\Users\\jiash\\OneDrive\\Documents\\GPT CodeX integration\\.venv\\
 ```
 
 Restart Codex after changing MCP configuration so it can discover `ask_gpt_next_step`.
+
+### Fake Mode Registration
+
+For the first Codex wiring test, register the MCP server in fake mode and do not set `OPENAI_API_KEY`:
+
+```toml
+[mcp_servers.gpt_codex_handoff]
+command = "C:\\Users\\jiash\\OneDrive\\Documents\\GPT CodeX integration\\.venv\\Scripts\\python.exe"
+args = ["-m", "gpt_codex_handoff.mcp_server"]
+env = { GPT_HANDOFF_REVIEWER_MODE = "fake" }
+```
+
+Restart Codex, then type `/mcp` in Codex chat. You should see `gpt_codex_handoff` as enabled. Some Codex UI versions show only the server row rather than an expandable tool list.
+
+After `/mcp` shows the server, you can safely ask Codex to call the tool:
+
+```text
+Call ask_gpt_next_step with summary="Fake-mode wiring test", changed_files=[], test_results="not run", open_questions=[], recent_log="", diff="", constraints=["Do not call OpenAI."]
+```
+
+The response should include a `handoff_note` saying fake reviewer mode is enabled and no OpenAI API call was made.
+
+Fake mode is only for wiring tests. It does not evaluate the session with a real model.
 
 ## Run Tests
 
@@ -113,7 +142,7 @@ It returns strict JSON:
 
 ### Safe Fake Reviewer
 
-This example uses a fake reviewer client and does not need `OPENAI_API_KEY`:
+This example uses `GPT_HANDOFF_REVIEWER_MODE=fake` and does not need `OPENAI_API_KEY`:
 
 ```powershell
 python examples\fake_reviewer.py
@@ -122,32 +151,20 @@ python examples\fake_reviewer.py
 The same pattern is useful in tests:
 
 ```python
+import os
+
 from gpt_codex_handoff.context import ReviewContext
 from gpt_codex_handoff.reviewer import OpenAIReviewer
 
 
-class FakeReviewerClient:
-    def create_recommendation(self, **kwargs):
-        return {
-            "next_step": "run the test suite",
-            "priority": "high",
-            "reason": "Verify the local checkout before using live reviewer calls.",
-            "should_continue": True,
-            "max_minutes": 5,
-            "commands_to_run": ["pytest"],
-            "files_to_inspect": ["README.md"],
-            "risk_level": "low",
-            "handoff_note": "No API call was made.",
-        }
-
-
-reviewer = OpenAIReviewer(client=FakeReviewerClient())
+os.environ["GPT_HANDOFF_REVIEWER_MODE"] = "fake"
+reviewer = OpenAIReviewer()
 print(reviewer.review(ReviewContext(summary="Local dry run.")))
 ```
 
 ### Live Reviewer
 
-Set `OPENAI_API_KEY` first. Live calls send the provided context to the OpenAI API after the local safety preflight passes.
+Unset `GPT_HANDOFF_REVIEWER_MODE` and set `OPENAI_API_KEY` first. Live calls send the provided context to the OpenAI API after the local safety preflight passes.
 
 ```python
 from gpt_codex_handoff.reviewer import OpenAIReviewer

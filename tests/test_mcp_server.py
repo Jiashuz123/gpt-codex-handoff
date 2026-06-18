@@ -40,6 +40,26 @@ class MCPServerTests(unittest.TestCase):
 
         self.assertEqual(result, expected)
 
+    def test_ask_gpt_next_step_uses_fake_mode_without_api_key(self):
+        with patch.dict(
+            "os.environ",
+            {"GPT_HANDOFF_REVIEWER_MODE": "fake"},
+            clear=True,
+        ):
+            result = mcp_server.ask_gpt_next_step(
+                summary="Verify MCP wiring.",
+                changed_files=["src/gpt_codex_handoff/mcp_server.py"],
+                test_results="not run",
+                open_questions=[],
+                recent_log="",
+                diff="",
+                constraints=["Do not call OpenAI."],
+            )
+
+        self.assertTrue(result["should_continue"])
+        self.assertEqual(result["risk_level"], "low")
+        self.assertIn("Fake reviewer mode", result["handoff_note"])
+
 
 if __name__ == "__main__":
     unittest.main()

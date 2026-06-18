@@ -98,6 +98,34 @@ class OpenAIResponsesClient:
         return json.loads(response.output_text)
 
 
+class FakeReviewerClient:
+    """Deterministic reviewer for local wiring tests."""
+
+    def create_recommendation(
+        self,
+        *,
+        model: str,
+        system_prompt: str,
+        payload: dict[str, Any],
+        schema: dict[str, Any],
+    ) -> Recommendation:
+        changed_files = payload.get("changed_files") or []
+        files_to_inspect = changed_files[:3] if isinstance(changed_files, list) else []
+        commands_to_run = ["pytest"] if payload.get("test_results") != "pytest passes" else []
+
+        return {
+            "next_step": "verify the MCP wiring in fake reviewer mode",
+            "priority": "medium",
+            "reason": "Fake mode is enabled, so this response proves the tool path works without a live API call.",
+            "should_continue": True,
+            "max_minutes": 5,
+            "commands_to_run": commands_to_run,
+            "files_to_inspect": files_to_inspect,
+            "risk_level": "low",
+            "handoff_note": "Fake reviewer mode is enabled; no OpenAI API call was made.",
+        }
+
+
 class OpenAIReviewer:
     """Reviewer facade with local safety preflight and schema validation."""
 
@@ -111,7 +139,7 @@ class OpenAIReviewer:
     ) -> None:
         self.model = model or os.getenv("OPENAI_REVIEWER_MODEL", "gpt-4.1-mini")
         self.prompt_path = prompt_path or Path(__file__).resolve().parents[2] / "reviewer_prompt.md"
-        self.client = client or OpenAIResponsesClient(api_key or os.getenv("OPENAI_API_KEY"))
+        self.client = client or _client_from_environment(api_key)
 
     def review(self, context: ReviewContext) -> Recommendation:
         try:
@@ -144,6 +172,13 @@ def safety_recommendation(reason: str, risk_level: str = "high") -> Recommendati
         "risk_level": risk_level,
         "handoff_note": reason,
     }
+
+
+def _client_from_environment(api_key: str | None) -> ReviewerClient:
+    mode = os.getenv("GPT_HANDOFF_REVIEWER_MODE", "").strip().lower()
+    if mode == "fake":
+        return FakeReviewerClient()
+    return OpenAIResponsesClient(api_key or os.getenv("OPENAI_API_KEY"))
 
 
 def validate_recommendation(value: Recommendation) -> None:

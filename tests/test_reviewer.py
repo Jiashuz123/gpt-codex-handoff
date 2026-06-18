@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from gpt_codex_handoff.context import ReviewContext
-from gpt_codex_handoff.reviewer import OpenAIResponsesClient, OpenAIReviewer, validate_recommendation
+from gpt_codex_handoff.reviewer import (
+    FakeReviewerClient,
+    OpenAIResponsesClient,
+    OpenAIReviewer,
+    validate_recommendation,
+)
 
 
 VALID_RECOMMENDATION = {
@@ -96,6 +102,26 @@ class ReviewerTests(unittest.TestCase):
                 payload={"summary": "No API key."},
                 schema={},
             )
+
+    def test_real_reviewer_mode_requires_api_key(self):
+        with patch.dict("os.environ", {}, clear=True):
+            reviewer = OpenAIReviewer()
+
+            with self.assertRaisesRegex(RuntimeError, "OPENAI_API_KEY is required"):
+                reviewer.review(ReviewContext(summary="No API key in real mode."))
+
+    def test_fake_reviewer_client_response_is_valid(self):
+        client = FakeReviewerClient()
+
+        result = client.create_recommendation(
+            model="unused",
+            system_prompt="unused",
+            payload={"summary": "Fake mode.", "changed_files": ["README.md"]},
+            schema={},
+        )
+
+        validate_recommendation(result)
+        self.assertIn("no OpenAI API call was made", result["handoff_note"])
 
 
 if __name__ == "__main__":

@@ -2,27 +2,15 @@
 
 from __future__ import annotations
 
+import os
+
 from gpt_codex_handoff.context import ReviewContext
 from gpt_codex_handoff.reviewer import OpenAIReviewer
 
 
-class FakeReviewerClient:
-    def create_recommendation(self, **kwargs):
-        return {
-            "next_step": "run the test suite",
-            "priority": "high",
-            "reason": "The skeleton should be verified locally before using a live API key.",
-            "should_continue": True,
-            "max_minutes": 5,
-            "commands_to_run": ["pytest"],
-            "files_to_inspect": ["README.md", "pyproject.toml"],
-            "risk_level": "low",
-            "handoff_note": "This recommendation came from a fake client; no API call was made.",
-        }
-
-
 def main() -> None:
-    reviewer = OpenAIReviewer(client=FakeReviewerClient())
+    os.environ["GPT_HANDOFF_REVIEWER_MODE"] = "fake"
+    reviewer = OpenAIReviewer()
     recommendation = reviewer.review(
         ReviewContext(
             summary="Trying the reviewer locally without a real API key.",
